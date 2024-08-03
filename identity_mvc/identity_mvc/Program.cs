@@ -78,6 +78,22 @@ builder.Services.AddAuthorization(option =>
 
 });
 
+
+
+// External login
+
+builder.Services.AddAuthentication().AddMicrosoftAccount(opt =>
+{
+    opt.ClientId = "";
+    opt.ClientSecret = "";
+});
+
+builder.Services.AddAuthentication().AddFacebook(opt =>
+{
+    opt.ClientId = "";
+    opt.ClientSecret = "";
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using identity_mvc.Services.IServices;
+using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 
 namespace identity_mvc.Authorize
