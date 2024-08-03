@@ -154,15 +154,16 @@ namespace identity_mvc.Controllers
                 var user = new ApplicationUser { 
                     UserName = model.Email,
                     Email = model.Email, 
-                    FullName = model.FullName
+                    FullName = model.FullName, 
+                    DateCreated = DateTime.Now,
                 };
 
                 var result = await _userManager.CreateAsync(user, model.Password);
                 if(result.Succeeded)
                 {
-                    if(model.RoleSelected != null && model.RoleSelected.Length > 0 && model.RoleSelected == SD.Admin)
+                    if(model.RoleSelected != null)
                     {
-                        await _userManager.AddToRoleAsync(user, SD.Admin);
+                        await _userManager.AddToRoleAsync(user, model.RoleSelected);
                     }
                     else
                     {
@@ -205,6 +206,14 @@ namespace identity_mvc.Controllers
                 var result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, lockoutOnFailure:true);
                 if (result.Succeeded)
                 {
+                    var user = await _userManager.GetUserAsync(User);
+                    var claim = await _userManager.GetClaimsAsync(user);
+
+                    if (claim.Count > 0)
+                    {
+                        await _userManager.RemoveClaimAsync(user, claim.FirstOrDefault(u => u.Type == "FirstName"));
+                    }
+                    await _userManager.AddClaimAsync(user, new System.Security.Claims.Claim("FirstName", user.FullName));
                     return LocalRedirect(returnUrl);
                 }
                 if (result.RequiresTwoFactor)

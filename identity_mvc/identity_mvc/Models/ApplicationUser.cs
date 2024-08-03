@@ -8,6 +8,7 @@ namespace identity_mvc.Models
     {
         [Required]
         public string FullName { get; set; }
+        public DateTime DateCreated { get; set; }
 
         [NotMapped]
         public string RoleId {  get; set; }

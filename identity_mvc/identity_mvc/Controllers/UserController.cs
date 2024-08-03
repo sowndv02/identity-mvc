@@ -24,7 +24,7 @@ namespace identity_mvc.Controllers
 
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
             var userList = _db.ApplicationUsers.ToList();
             var userRole = _db.UserRoles.ToList();  
@@ -33,15 +33,8 @@ namespace identity_mvc.Controllers
 
             foreach(var user in userList)
             {
-                var user_role = userRole.FirstOrDefault(u => u.UserId == user.Id);
-                if (user_role == null)
-                {
-                    user.Role = "None";
-                }
-                else 
-                {
-                    user.Role = roles.FirstOrDefault(x => x.Id == user_role.RoleId).Name;
-                }
+                var user_role = await _userManager.GetRolesAsync(user) as List<string>;
+                user.Role = String.Join(",", user_role);
             }
 
             return View(userList);
