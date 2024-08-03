@@ -20,6 +20,11 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
 
 
 builder.Services.AddTransient<IEmailSender, EmailSender>();
+// Config access denied path
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.AccessDeniedPath = new PathString("/Account/AccessDenied");
+});
 
 // Config password, Lockout, AccessAttempts
 builder.Services.Configure<IdentityOptions>(opt =>

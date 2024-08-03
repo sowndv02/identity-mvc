@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Text.Encodings.Web;
 
 namespace identity_mvc.Controllers
@@ -12,15 +13,19 @@ namespace identity_mvc.Controllers
     public class AccountController : Controller
     {
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly RoleManager<IdentityRole> _roleManager;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IEmailSender _emailSender;
         private readonly UrlEncoder _urlEncoder;
-        public AccountController(SignInManager<ApplicationUser> signInManager, UserManager<ApplicationUser> userManager, IEmailSender emailSender, UrlEncoder urlEncoder)
+        public AccountController(SignInManager<ApplicationUser> signInManager, UserManager<ApplicationUser> userManager, 
+            IEmailSender emailSender, UrlEncoder urlEncoder, RoleManager<IdentityRole> roleManager)
         {
             _urlEncoder = urlEncoder;
             _emailSender = emailSender;
             _userManager = userManager;
             _signInManager = signInManager;
+            _roleManager = roleManager;
+
         }
         [HttpGet]
         [AllowAnonymous]
@@ -118,10 +123,22 @@ namespace identity_mvc.Controllers
         }
         [HttpGet]
         [AllowAnonymous]
-        public IActionResult Register(string returnUrl = null)
+        public async Task<IActionResult> Register(string returnUrl = null)
         {
+            if (_roleManager.RoleExistsAsync(SD.Admin).GetAwaiter().GetResult())
+            {
+                await _roleManager.CreateAsync(new IdentityRole(SD.Admin));
+                await _roleManager.CreateAsync(new IdentityRole(SD.User));
+            }
             ViewData["ReturnUrl"] = returnUrl;
-            RegisterViewModel registerViewModel = new RegisterViewModel();
+            RegisterViewModel registerViewModel = new RegisterViewModel()
+            {
+                RoleList = _roleManager.Roles.Select(x => x.Name).Select(i => new SelectListItem
+                {
+                    Text = i, 
+                    Value = i
+                })
+            };
             return View(registerViewModel);
         }
 
@@ -143,6 +160,14 @@ namespace identity_mvc.Controllers
                 var result = await _userManager.CreateAsync(user, model.Password);
                 if(result.Succeeded)
                 {
+                    if(model.RoleSelected != null && model.RoleSelected.Length > 0 && model.RoleSelected == SD.Admin)
+                    {
+                        await _userManager.AddToRoleAsync(user, SD.Admin);
+                    }
+                    else
+                    {
+                        await _userManager.AddToRoleAsync(user, SD.User);
+                    }
 
                     var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
@@ -159,6 +184,11 @@ namespace identity_mvc.Controllers
                 }
                 AddErrors(result);
             }
+            model.RoleList = _roleManager.Roles.Select(x => x.Name).Select(i => new SelectListItem
+            {
+                Text = i,
+                Value = i
+            });
             return View(model);
         }
 
@@ -206,6 +236,13 @@ namespace identity_mvc.Controllers
         [AllowAnonymous]
         [HttpGet]
         public IActionResult Error()
+        {
+            return View();
+        }
+
+        [AllowAnonymous]
+        [HttpGet]
+        public IActionResult AccessDenied()
         {
             return View();
         }
