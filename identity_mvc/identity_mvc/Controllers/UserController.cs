@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Text.Encodings.Web;
 using identity_mvc.Data;
 using identity_mvc.Models.ViewModels;
+using System.Security.Claims;
 
 namespace identity_mvc.Controllers
 {
@@ -153,6 +154,69 @@ namespace identity_mvc.Controllers
             return RedirectToAction(nameof(Index));
 
         }
+
+        public async Task<IActionResult> ManageUserClaim(string userId)
+        {
+            ApplicationUser user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            var exsitingUserClaims = await _userManager.GetClaimsAsync(user);
+            var model = new ClaimsViewModel()
+            {
+                User = user
+            };
+
+            foreach (Claim claim in ClaimStore.claimsList)
+            {
+                ClaimSelection userClaim = new()
+                {
+                    ClaimType = claim.Type
+                };
+                if (exsitingUserClaims.Any(c => c.Type == claim.Type))
+                {
+                    userClaim.IsSelected = true;
+                }
+                model.ClaimList.Add(userClaim);
+            }
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ManageUserClaim(ClaimsViewModel claimsViewModel)
+        {
+            ApplicationUser user = await _userManager.FindByIdAsync(claimsViewModel.User.Id);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            var oldClaims = await _userManager.GetClaimsAsync(user);
+            var result = await _userManager.RemoveClaimsAsync(user, oldClaims);
+
+            if (!result.Succeeded)
+            {
+                TempData[SD.Error] = "Error while removing claims";
+                return View(claimsViewModel);
+            }
+
+            result = await _userManager.AddClaimsAsync(user,
+                claimsViewModel.ClaimList.Where(x => x.IsSelected).Select(y => new Claim(y.ClaimType, y.IsSelected.ToString())));
+
+            if (!result.Succeeded)
+            {
+                TempData[SD.Error] = "Error while adding claims";
+                return View(claimsViewModel);
+            }
+
+            TempData[SD.Success] = "Claims assigned successfully";
+            return RedirectToAction(nameof(Index));
+        }
+
+
 
     }
 }
